@@ -1,6 +1,7 @@
 
 (
 function () {
+        console.log("unsplash.js loaded and executed");
         // Ваш Unsplash Access Key
         const UNSPLASH_KEY = 'tESmJQNjjp1CLrWyrdg5hx9xsnwO7ZMXv7HG3nMYIhU';
 
