@@ -1,4 +1,3 @@
-
 (
 function () {
         console.log("unsplash.js loaded and executed");
@@ -63,7 +62,7 @@ function () {
             })
             .catch(function (err) {
               console.error('[Unsplash] load failed', err);
-              try { container.innerHTML = '<div style="color:#c00;font-size:14px;padding:8px;'>Ошибка загрузки изображений Unsplash: ' + escapeHtml(err.message || String(err)) + '</div>'; } catch(e) { }
+              try { container.innerHTML = '<div style="color:#c00;font-size:14px;padding:8px;">Ошибка загрузки изображений Unsplash: ' + escapeHtml(err.message || String(err)) + '</div>'; } catch(e) { }
             });
         }
 
@@ -73,59 +72,48 @@ function () {
           });
         }
 
-        function processStaticPlaceholders(root) {
-          var nodes = root.querySelectorAll(
-            '.unsplash-collection[data-collection]:not([' + RENDERED_ATTR + '])'
-          );
-          nodes.forEach(function (div) {
-            var id = (div.getAttribute('data-collection') || '').trim();
-            if (id) renderUnsplashCollection(id, div);
-          });
+        function getUnsplashCollectionId() {
+          var prop = document.querySelector('.notion-property[data-property-id="unsplashId"] .notion-semantic-string');
+          if (prop) {
+            var text = (prop.textContent || '').trim();
+            if (text) return text;
+          }
+          return null;
         }
 
-        function processTextMarkers(root) {
-          var nodes = root.querySelectorAll('p, span, div');
-          nodes.forEach(function (el) {
-            if (el.hasAttribute(RENDERED_ATTR)) return;
-            var text = el.textContent || '';
-            var m = text.match(/\[unsplash:([\w-]+)\]/i);
-            if (m) {
-              var gallery = document.createElement('div');
-              gallery.style.margin = '16px 0';
-              el.setAttribute(RENDERED_ATTR, '1');
-              el.parentNode.insertBefore(gallery, el.nextSibling);
-              renderUnsplashCollection(m[1], gallery);
-            }
-          });
-        }
-
-        function scan(root) {
-          var container = root || document;
-          processStaticPlaceholders(container);
-          processTextMarkers(container);
+        function renderGalleryAtBottom(id) {
+          if (!id) return;
+          var existing = document.getElementById('unsplash-gallery');
+          if (existing) return;
+          var container = document.querySelector('.notion-page-content');
+          if (!container) return;
+          var gallery = document.createElement('div');
+          gallery.id = 'unsplash-gallery';
+          container.appendChild(gallery);
+          renderUnsplashCollection(id, gallery);
         }
 
         function init() {
-          scan(document);
+          var id = getUnsplashCollectionId();
+          console.log('[Unsplash] init called, found id:', id);
+          if (id) {
+            renderGalleryAtBottom(id);
+          }
+        }
 
-          // Наблюдаем за динамически подгружаемым контентом (Notion/SPA)
-          var observer = new MutationObserver(function (mutations) {
-            mutations.forEach(function (m) {
-              m.addedNodes.forEach(function (node) {
-                if (node && node.nodeType === 1) scan(node);
-              });
+        init();
+
+        // Наблюдаем за динамически подгружаемым контентом (Notion/SPA)
+        var observer = new MutationObserver(function (mutations) {
+          mutations.forEach(function (m) {
+            m.addedNodes.forEach(function (node) {
+              if (node && node.nodeType === 1) init();
             });
           });
-          observer.observe(document.body, { childList: true, subtree: true });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
 
-          // Подстрахуемся на смену роутов
-          window.addEventListener('popstate', function () { setTimeout(function () { scan(document); }, 0); });
-          window.addEventListener('hashchange', function () { setTimeout(function () { scan(document); }, 0); });
-        }
-
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', init);
-        } else {
-          init();
-        }
+        // Подстрахуемся на смену роутов
+        window.addEventListener('popstate', function () { setTimeout(init, 0); });
+        window.addEventListener('hashchange', function () { setTimeout(init, 0); });
       })();
