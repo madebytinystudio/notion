@@ -1,5 +1,4 @@
-(
-function () {
+(function () {
         console.log("unsplash.js loaded and executed");
         // Ваш Unsplash Access Key
         const UNSPLASH_KEY = 'tESmJQNjjp1CLrWyrdg5hx9xsnwO7ZMXv7HG3nMYIhU';
@@ -78,6 +77,19 @@ function () {
             var text = (prop.textContent || '').trim();
             if (text) return text;
           }
+          // fallback: искать по ярлыку свойства (без учёта регистра)
+          var properties = document.querySelectorAll('.notion-property');
+          for (var i = 0; i < properties.length; i++) {
+            var p = properties[i];
+            var label = p.querySelector('.notion-property-label');
+            if (label && label.textContent.trim().toLowerCase() === 'unsplashid') {
+              var valElem = p.querySelector('.notion-semantic-string');
+              if (valElem) {
+                var valText = valElem.textContent.trim();
+                if (valText) return valText;
+              }
+            }
+          }
           return null;
         }
 
@@ -101,19 +113,27 @@ function () {
           }
         }
 
-        init();
+        function setup() {
+          init();
 
-        // Наблюдаем за динамически подгружаемым контентом (Notion/SPA)
-        var observer = new MutationObserver(function (mutations) {
-          mutations.forEach(function (m) {
-            m.addedNodes.forEach(function (node) {
-              if (node && node.nodeType === 1) init();
+          // Наблюдаем за динамически подгружаемым контентом (Notion/SPA)
+          var observer = new MutationObserver(function (mutations) {
+            mutations.forEach(function (m) {
+              m.addedNodes.forEach(function (node) {
+                if (node && node.nodeType === 1) init();
+              });
             });
           });
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
+          observer.observe(document.body, { childList: true, subtree: true });
 
-        // Подстрахуемся на смену роутов
-        window.addEventListener('popstate', function () { setTimeout(init, 0); });
-        window.addEventListener('hashchange', function () { setTimeout(init, 0); });
+          // Подстрахуемся на смену роутов
+          window.addEventListener('popstate', function () { setTimeout(init, 0); });
+          window.addEventListener('hashchange', function () { setTimeout(init, 0); });
+        }
+
+        if (document.readyState === 'loading' || !document.body) {
+          document.addEventListener('DOMContentLoaded', setup);
+        } else {
+          setup();
+        }
       })();
